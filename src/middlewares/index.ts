@@ -1,2 +1,2 @@
-import { validate } from "./validate.midddleware.js";
+import { validate } from "./validate.middleware.js";
 
