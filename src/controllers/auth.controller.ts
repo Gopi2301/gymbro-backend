@@ -11,8 +11,25 @@ export const signup = async (req: Request, res: Response) => {
   console.log({ email, name, password, role });
 
   const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
-  console.log("signup triggered");
-
+  const redirectUrl = `${frontendUrl.replace(/\/$/, "").replace(/\/sign-in\/?$/, "")}/sign-in`;
+  console.log("signup triggered", { redirectUrl });
+// Check if user exists
+  const { data: existingUser, error: existingUserError } = await supabase.from("users").select("email").eq("email", email).maybeSingle();
+  if (existingUserError) {
+    console.log("User already exists error", existingUserError);
+    return res.status(400).json({
+      error: existingUserError,
+      message: "Bad Request",
+    });
+  }
+  if (existingUser) {
+    console.log("User already exists", existingUser);
+    return res.status(400).json({
+      error: "User already exists",
+      message: "User already exists",
+    });
+  }
+  console.log("User does not exist, creating new user");
   const { data, error } = await supabase.auth.signUp({
     email,
     options: {
@@ -20,7 +37,7 @@ export const signup = async (req: Request, res: Response) => {
         name,
         role,
       },
-      emailRedirectTo: `${frontendUrl}/sign-in`,
+      emailRedirectTo: redirectUrl,
     },
     password,
   });
@@ -34,26 +51,20 @@ export const signup = async (req: Request, res: Response) => {
   }
   // Create user in local db
   if (data.user) {
-    const { email, email_verified, name, phone_verified, role } = data.user.user_metadata as UserMetadata;
-    const { data: ExistingUser, error: ExistingUserError } = await supabase.from("users").select("email").eq("email", email).maybeSingle();
-    if (ExistingUserError) {
-      return res.status(400).json({
-        error: ExistingUserError,
-        message: "Bad Request",
-      });
-    }
-    if (ExistingUser) {
-      return res.status(400).json({
-        error: "User already exists",
-        message: "User already exists",
-      });
-    }
+    console.log("User created successfully", data);
+    console.log({
+      email,
+      email_verified: false,
+      name,
+      phone_verified: false,
+      role,
+    })
     try {
       await db.insert(usersTable).values({
         email,
-        email_verified,
+        email_verified: false,
         name,
-        phone_verified,
+        phone_verified: false,
         role,
       });
     } catch (error) {
@@ -74,17 +85,20 @@ export const signup = async (req: Request, res: Response) => {
 
 export const signin = async (req: Request, res: Response) => {
   const { email, password } = req.body as SigninInput;
-  console.log({ email, password });
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
+  console.log("signin auth data", data);
   if (error) {
-    console.log(error);
+    console.log("signin auth error", error);
     let errorMessage = "An error occurred during sign in";
     if (error.message === "Invalid login credentials") {
       errorMessage = "Invalid email or password";
+    } 
+    if (error.status === 400){
+      errorMessage = "Email not confirmed, please check your email for the confirmation link";
     }
     return res.status(401).json({
       error: error.message,
@@ -184,6 +198,8 @@ export const coachSignup = async (req: Request, res: Response) => {
   console.log({ gymAddress, gymName, members, name, password, work_email });
 
   const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
+  const redirectUrl = `${frontendUrl.replace(/\/$/, "").replace(/\/sign-in\/?$/, "")}/sign-in`;
+
   const { data, error } = await supabase.auth.signUp({
     email: work_email,
     options: {
@@ -194,7 +210,7 @@ export const coachSignup = async (req: Request, res: Response) => {
         name,
         role: "coach",
       },
-      emailRedirectTo: `${frontendUrl}/sign-in`,
+      emailRedirectTo: redirectUrl,
     },
     password,
   });
@@ -239,12 +255,13 @@ export const coachSignup = async (req: Request, res: Response) => {
   });
 };
 
-
 export const superAdminSignup = async (req: Request, res: Response) => {
   const { email, name, password, role } = req.body as SuperAdminSignupInput;
   console.log({ email, name, password, role });
 
   const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
+  const redirectUrl = `${frontendUrl.replace(/\/$/, "").replace(/\/sign-in\/?$/, "")}/sign-in`;
+
   const { data, error } = await supabase.auth.signUp({
     email,
     options: {
@@ -252,7 +269,7 @@ export const superAdminSignup = async (req: Request, res: Response) => {
         name,
         role: "superadmin",
       },
-      emailRedirectTo: `${frontendUrl}/sign-in`,
+      emailRedirectTo: redirectUrl,
     },
     password,
   });
