@@ -2,64 +2,11 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 
 const options = {
+  apis: ['./src/routes/*.ts'], // files containing annotations as above
   definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'Gym Bro API',
-      version: '1.0.0',
-      description: 'A simple Express API for the Gym Bro application',
-    },
-    servers: [
-      {
-        url: 'http://localhost:5000',
-      },
-    ],
     components: {
       schemas: {
-        Signup: {
-          type: 'object',
-          properties: {
-            email: {
-              type: 'string',
-              format: 'email',
-            },
-            name: {
-              type: 'string',
-            },
-            password: {
-              type: 'string',
-            },
-            role: {
-              type: 'string',
-              enum: ['user', 'coach'],
-            },
-          },
-          required: ['email', 'name', 'password', 'role'],
-        },
-        Signin: {
-          type: 'object',
-          properties: {
-            email: {
-              type: 'string',
-              format: 'email',
-            },
-            password: {
-              type: 'string',
-            },
-          },
-          required: ['email', 'password'],
-        },
-        RefreshToken: {
-          type: 'object',
-          properties: {
-            refresh_token: {
-              type: 'string',
-            },
-          },
-          required: ['refresh_token'],
-        },
         CoachSignup: {
-          type: 'object',
           properties: {
             gymAddress: {
               type: 'string',
@@ -80,8 +27,8 @@ const options = {
               type: 'string',
             },
             work_email: {
-              type: 'string',
               format: 'email',
+              type: 'string',
             },
           },
           required: [
@@ -93,11 +40,64 @@ const options = {
             'role',
             'work_email',
           ],
+          type: 'object',
+        },
+        RefreshToken: {
+          properties: {
+            refresh_token: {
+              type: 'string',
+            },
+          },
+          required: ['refresh_token'],
+          type: 'object',
+        },
+        Signin: {
+          properties: {
+            email: {
+              format: 'email',
+              type: 'string',
+            },
+            password: {
+              type: 'string',
+            },
+          },
+          required: ['email', 'password'],
+          type: 'object',
+        },
+        Signup: {
+          properties: {
+            email: {
+              format: 'email',
+              type: 'string',
+            },
+            name: {
+              type: 'string',
+            },
+            password: {
+              type: 'string',
+            },
+            role: {
+              enum: ['user', 'coach'],
+              type: 'string',
+            },
+          },
+          required: ['email', 'name', 'password', 'role'],
+          type: 'object',
         },
       },
     },
+    info: {
+      description: 'A simple Express API for the Gym Bro application',
+      title: 'Gym Bro API',
+      version: '1.0.0',
+    },
+    openapi: '3.0.0',
+    servers: [
+      {
+        url: 'http://localhost:5000',
+      },
+    ],
   },
-  apis: ['./src/routes/*.ts'], // files containing annotations as above
 };
 
 const openapiSpecification = swaggerJsdoc(options);

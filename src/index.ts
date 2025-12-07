@@ -1,11 +1,11 @@
+import loggerMiddleware from "#middlewares/logger.middleware.js";
 // index.js
 import { apiRouter } from "#routes/index.js";
+import logger from "#utils/logger.js";
+import openapiSpecification from '#utils/swagger.js';
 import cors from "cors";
 import express, { Request, Response } from "express";
-import logger from "#utils/logger.js";
-import loggerMiddleware from "#middlewares/logger.middleware.js";
 import swaggerUi from 'swagger-ui-express';
-import openapiSpecification from '#utils/swagger.js';
 
 const app = express();
 
