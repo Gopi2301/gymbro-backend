@@ -34,3 +34,12 @@ export const CoachSignupSchema = z.object({
 
 export type CoachSignupInput = z.infer<typeof CoachSignupSchema>;
 export type RefreshTokenInput = z.infer<typeof RefreshTokenSchema>;
+
+export const SuperAdminSignupSchema = z.object({
+  email: z.email("Invalid email address"),
+  name: z.string().min(4, "Name is required"),
+  password: z.string().min(8, "Password must be atleast 8 characters"),
+  role: z.string().min(4, "Role is required"),
+});
+
+export type SuperAdminSignupInput = z.infer<typeof SuperAdminSignupSchema>;

@@ -1,9 +1,9 @@
-import { CoachSignupInput, RefreshTokenInput, SigninInput, SignupInput } from "#schemas/auth.schema.js";
+import { CoachSignupInput, RefreshTokenInput, SigninInput, SignupInput, SuperAdminSignupInput } from "#schemas/auth.schema.js";
 import { Request, Response } from "express";
 
 import { db } from "../db/index.js";
-import { coachTable, usersTable } from "../db/schema.js";
-import { UserMetadata } from "../types/auth.types.js";
+import { coachTable, superAdminTable, usersTable } from "../db/schema.js";
+import { SuperAdmin, UserMetadata } from "../types/auth.types.js";
 import { supabase } from "../utils/supabaseClient.js";
 
 export const signup = async (req: Request, res: Response) => {
@@ -96,7 +96,32 @@ export const signin = async (req: Request, res: Response) => {
     session,
     user,
   });
-  const { email_verified, name, phone_verified, role } = user.user_metadata as UserMetadata;
+  let email_verified, name, phone_verified, role;
+
+  if (user.user_metadata.role === "superadmin") {
+    const { data: superAdminData, error: superAdminError } = await supabase
+      .from("super_admin")
+      .select("*")
+      .eq("email", user.email)
+      .maybeSingle<SuperAdmin>();
+    if (superAdminError) {
+      return res.status(400).json({
+        error: superAdminError,
+        message: "Bad Request",
+      });
+    }
+    if (!superAdminData) {
+      return res.status(404).json({
+        message: "Super admin profile not found",
+      });
+    }
+    email_verified = true; // Superadmins are verified by default or handled differently
+    name = superAdminData.name;     
+    phone_verified = true;
+    role = "superadmin";
+  } else {
+    ({ email_verified, name, phone_verified, role } = user.user_metadata as UserMetadata);
+  }
 
   res.status(200).json({
     data: {
@@ -214,3 +239,65 @@ export const coachSignup = async (req: Request, res: Response) => {
   });
 };
 
+
+export const superAdminSignup = async (req: Request, res: Response) => {
+  const { email, name, password, role } = req.body as SuperAdminSignupInput;
+  console.log({ email, name, password, role });
+
+  const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    options: {
+      data: {
+        name,
+        role: "superadmin",
+      },
+      emailRedirectTo: `${frontendUrl}/sign-in`,
+    },
+    password,
+  });
+
+  if (error) {
+    console.log(error);
+    return res.status(400).json({
+      error,
+      message: error.message || "Bad Request",
+    });
+  }
+
+  // Create user in local db
+  if (data.user) {
+    // Check if user already exists
+    const { data: existingUser, error: existingUserError } = await supabase.from("super_admin").select("email").eq("email", email).maybeSingle();
+    if (existingUserError) {
+      return res.status(400).json({
+        error: existingUserError,
+        message: existingUserError.message || "Bad Request",
+      });
+    }
+    if (existingUser) {
+      return res.status(400).json({
+        error: "User already exists",
+        message: "User already exists",
+      });
+    }
+    try {
+      await db.insert(superAdminTable).values({
+        email,
+        name,
+        role: "superadmin",
+      });
+    } catch (error) {
+      console.log("signup db error", error);
+      return res.status(400).json({
+        error,
+        message: "User already exists",
+      });
+    }
+  }
+
+  res.status(200).json({
+    data,
+    message: "Thanks for signing up! Check your email for the confirmation link.",
+  });
+};

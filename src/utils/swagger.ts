@@ -84,6 +84,25 @@ const options = {
           required: ['email', 'name', 'password', 'role'],
           type: 'object',
         },
+        SuperAdminSignup: {
+          properties: {
+            email: {
+              format: 'email',
+              type: 'string',
+            },
+            name: {
+              type: 'string',
+            },
+            password: {
+              type: 'string',
+            },
+            role: {
+              type: 'string',
+            },
+          },
+          required: ['email', 'name', 'password', 'role'],
+          type: 'object',
+        },
       },
     },
     info: {

@@ -20,3 +20,10 @@ export const coachTable = pgTable("coach", {
   role: varchar("role", { length: 255 }).notNull(),
   work_email: varchar("work_email", { length: 255 }).notNull().unique(),
 });
+
+export const superAdminTable = pgTable("super_admin", {
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  name: varchar("name", { length: 255 }).notNull(),
+  role: varchar("role", { length: 255 }).notNull().default("superadmin"),
+});

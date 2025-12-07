@@ -1,6 +1,6 @@
 import { authController } from "#controllers/index.js";
 import { validate } from "#middlewares/validate.middleware.js";
-import { CoachSignupSchema, RefreshTokenSchema, SigninSchema, SignupSchema } from "#schemas/auth.schema.js";
+import { CoachSignupSchema, RefreshTokenSchema, SigninSchema, SignupSchema, SuperAdminSignupSchema } from "#schemas/auth.schema.js";
 import { Router } from "express";
 const router = Router();
 
@@ -83,5 +83,24 @@ router.post("/refresh", validate(RefreshTokenSchema), authController.refresh);
  *         description: Bad request
  */
 router.post("/coach/signup", validate(CoachSignupSchema), authController.coachSignup);
+
+/**
+ * @swagger
+ * /api/v1/auth/super-admin/signup:
+ *   post:
+ *     summary: Signup a new super admin
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/SuperAdminSignup'
+ *     responses:
+ *       201:
+ *         description: Super admin created successfully
+ *       400:
+ *         description: Bad request
+ */
+router.post("/super-admin/signup", validate(SuperAdminSignupSchema), authController.superAdminSignup);
 
 export const authRouter = router;
