@@ -1,6 +1,9 @@
-import { SigninInput, SignupInput } from "#schemas/auth.schema.js";
+import { CoachSignupInput, RefreshTokenInput, SigninInput, SignupInput } from "#schemas/auth.schema.js";
 import { Request, Response } from "express";
 
+import { db } from "../db/index.js";
+import { coachTable, usersTable } from "../db/schema.js";
+import { UserMetadata } from "../types/auth.types.js";
 import { supabase } from "../utils/supabaseClient.js";
 
 export const signup = async (req: Request, res: Response) => {
@@ -8,6 +11,8 @@ export const signup = async (req: Request, res: Response) => {
   console.log({ email, name, password, role });
 
   const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
+  console.log("signup triggered");
+
   const { data, error } = await supabase.auth.signUp({
     email,
     options: {
@@ -19,13 +24,47 @@ export const signup = async (req: Request, res: Response) => {
     },
     password,
   });
+  console.log("signup auth data", data);
   if (error) {
-    console.log(error);
+    console.log("signup auth error", error);
     return res.status(400).json({
       error,
       message: "Bad Request",
     });
   }
+  // Create user in local db
+  if (data.user) {
+    const { email, email_verified, name, phone_verified, role } = data.user.user_metadata as UserMetadata;
+    const { data: ExistingUser, error: ExistingUserError } = await supabase.from("users").select("email").eq("email", email).maybeSingle();
+    if (ExistingUserError) {
+      return res.status(400).json({
+        error: ExistingUserError,
+        message: "Bad Request",
+      });
+    }
+    if (ExistingUser) {
+      return res.status(400).json({
+        error: "User already exists",
+        message: "User already exists",
+      });
+    }
+    try {
+      await db.insert(usersTable).values({
+        email,
+        email_verified,
+        name,
+        phone_verified,
+        role,
+      });
+    } catch (error) {
+      console.log("signup db error", error);
+      return res.status(400).json({
+        error,
+        message: "Bad Request",
+      });
+    }
+  }
+
   // Add signup logics
   res.status(200).json({
     data,
@@ -43,8 +82,13 @@ export const signin = async (req: Request, res: Response) => {
   });
   if (error) {
     console.log(error);
-    return res.status(400).json({
-      error,
+    let errorMessage = "An error occurred during sign in";
+    if (error.message === "Invalid login credentials") {
+      errorMessage = "Invalid email or password";
+    }
+    return res.status(401).json({
+      error: error.message,
+      message: errorMessage,
     });
   }
   const { session, user } = data;
@@ -52,12 +96,7 @@ export const signin = async (req: Request, res: Response) => {
     session,
     user,
   });
-  const { email_verified, name, phone_verified, role } = user.user_metadata as {
-    email_verified: boolean;
-    name: string;
-    phone_verified: boolean;
-    role: string;
-  };
+  const { email_verified, name, phone_verified, role } = user.user_metadata as UserMetadata;
 
   res.status(200).json({
     data: {
@@ -69,13 +108,109 @@ export const signin = async (req: Request, res: Response) => {
       },
       user: {
         email: user.email,
-        email_verified,
+        email_verified: email_verified,
         id: user.id,
-        name,
-        phone_verified,
-        role,
+        name: name,
+        phone_verified: phone_verified,
+        role: role,
       },
     },
     message: "Thanks for signing in!",
   });
 };
+
+export const refresh = async (req: Request, res: Response) => {
+  const { refresh_token } = req.body as RefreshTokenInput;
+
+  const { data, error } = await supabase.auth.refreshSession({
+    refresh_token,
+  });
+
+  if (error) {
+    console.log(error);
+    return res.status(401).json({
+      error: error.message,
+      message: "Unauthorized: Invalid refresh token",
+    });
+  }
+
+  const { session, user } = data;
+  if (!session || !user) {
+    return res.status(401).json({
+      message: "Unauthorized: Session expired",
+    });
+  }
+
+  res.status(200).json({
+    data: {
+      session: {
+        access_token: session.access_token,
+        expires_at: session.expires_at,
+        expires_in: session.expires_in,
+        refresh_token: session.refresh_token,
+      },
+    },
+    message: "Token refreshed successfully",
+  });
+};
+
+export const coachSignup = async (req: Request, res: Response) => {
+  const { gymAddress, gymName, members, name, password, work_email } = req.body as CoachSignupInput;
+  console.log({ gymAddress, gymName, members, name, password, work_email });
+
+  const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
+  const { data, error } = await supabase.auth.signUp({
+    email: work_email,
+    options: {
+      data: {
+        gymAddress,
+        gymName,
+        members,
+        name,
+        role: "coach",
+      },
+      emailRedirectTo: `${frontendUrl}/sign-in`,
+    },
+    password,
+  });
+  if (error) {
+    console.log(error);
+    return res.status(400).json({
+      error,
+      message: "Bad Request",
+    });
+  }
+
+  // Create user in local db
+  if (data.user) {
+    // Check if user already exists
+    const { data: existingUser, error: existingUserError } = await supabase.from("coach").select("work_email").eq("work_email", work_email).maybeSingle();
+    if (existingUserError) {
+      return res.status(400).json({
+        error: existingUserError,
+        message: "Bad Request",
+      });
+    }
+    if (existingUser) {
+      return res.status(400).json({
+        error: "User already exists",
+        message: "User already exists",
+      });
+    }
+    await db.insert(coachTable).values({
+      gymAddress,
+      gymName,
+      members,
+      name,
+      role: "coach",
+      work_email,
+    });
+  }
+
+  // Add signup logics
+  res.status(200).json({
+    data,
+    message: "Thanks for signing up! Check your email for the confirmation link.",
+  });
+};
+

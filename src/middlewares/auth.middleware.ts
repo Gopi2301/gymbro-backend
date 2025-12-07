@@ -13,7 +13,7 @@ declare module "express-serve-static-core" {
 export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const authHeader = req.headers.authorization;
-
+    console.log("authHeaders", authHeader);
     if (!authHeader?.startsWith("Bearer ")) {
       return res.status(401).json({
         message: "Unauthorized: Missing or invalid token",
@@ -28,6 +28,7 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     } = await supabase.auth.getUser(token);
 
     if (error || !user) {
+      console.log("error", error);
       return res.status(401).json({
         error: error?.message,
         message: "Unauthorized: Invalid token",
