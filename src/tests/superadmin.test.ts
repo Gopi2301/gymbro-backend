@@ -2,9 +2,9 @@ import 'dotenv/config';
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import { authRouter } from '../routes/auth.router';
-import { db } from '../db';
-import { superAdminTable } from '../db/schema';
+import { authRouter } from '../routes/auth.router.js';
+import { db } from '../db/index.js';
+import { superAdminTable } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 
 // Mock Supabase

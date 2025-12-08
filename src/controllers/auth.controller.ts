@@ -14,9 +14,9 @@ export const signup = async (req: Request, res: Response) => {
   const redirectUrl = `${frontendUrl.replace(/\/$/, "").replace(/\/sign-in\/?$/, "")}/sign-in`;
   console.log("signup triggered", { redirectUrl });
 // Check if user exists
-  const { data: existingUser, error: existingUserError } = await supabase.from("users").select("email").eq("email", email).maybeSingle();
+  const { data: existingUser, error: existingUserError } = await supabase.from("auth.users").select("email, email_verified").eq("email", email).maybeSingle();
   if (existingUserError) {
-    console.log("User already exists error", existingUserError);
+    console.log("signup existing user error", existingUserError);
     return res.status(400).json({
       error: existingUserError,
       message: "Bad Request",
