@@ -14,7 +14,7 @@ export const signup = async (req: Request, res: Response) => {
   const redirectUrl = `${frontendUrl.replace(/\/$/, "").replace(/\/sign-in\/?$/, "")}/sign-in`;
   console.log("signup triggered", { redirectUrl });
 // Check if user exists
-  const { data: existingUser, error: existingUserError } = await supabase.from("auth.users").select("email, email_verified").eq("email", email).maybeSingle();
+  const { data: existingUser, error: existingUserError } = await supabase.from("users").select("email").eq("email", email).maybeSingle();
   if (existingUserError) {
     console.log("signup existing user error", existingUserError);
     return res.status(400).json({
@@ -63,6 +63,7 @@ export const signup = async (req: Request, res: Response) => {
       await db.insert(usersTable).values({
         email,
         email_verified: false,
+        id: data.user.id,
         name,
         phone_verified: false,
         role,
@@ -94,13 +95,13 @@ export const signin = async (req: Request, res: Response) => {
   if (error) {
     console.log("signin auth error", error);
     let errorMessage = "An error occurred during sign in";
-    if (error.message === "Invalid login credentials") {
+    if (error.code === "invalid_credentials") {
       errorMessage = "Invalid email or password";
     } 
-    if (error.status === 400){
+    if (error.code =="email_not_confirmed"){
       errorMessage = "Email not confirmed, please check your email for the confirmation link";
     }
-    return res.status(401).json({
+    return res.status(error.status ?? 400).json({
       error: error.message,
       message: errorMessage,
     });
@@ -241,6 +242,7 @@ export const coachSignup = async (req: Request, res: Response) => {
     await db.insert(coachTable).values({
       gymAddress,
       gymName,
+      id: data.user.id,
       members,
       name,
       role: "coach",
@@ -300,6 +302,7 @@ export const superAdminSignup = async (req: Request, res: Response) => {
     try {
       await db.insert(superAdminTable).values({
         email,
+        id: data.user.id,
         name,
         role: "superadmin",
       });
