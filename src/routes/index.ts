@@ -8,3 +8,5 @@ router.use("/auth", authRouter);
 router.use("/users", userRouter);
 router.use("/exercises", exerciseRouter);
 export const apiRouter = router;
+
+// Forced restart trigger

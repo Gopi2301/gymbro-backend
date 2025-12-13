@@ -44,10 +44,10 @@ export type muscleGroupType = z.infer<typeof muscleGroupZodEnum>;
 // Zod schema for validating exercise queries
 export const exerciseQuerySchema = z.object({
   equipment: equipmentZodEnum.optional(),
-  primaryMuscle: muscleGroupZodEnum,
+  primaryMuscle: muscleGroupZodEnum.optional(), // Made optional for filtering
   secondaryMuscle: muscleGroupZodEnum.optional(),
   stabilizers: muscleGroupZodEnum.optional(),
-  type: exerciseTypeZodEnum,
+  type: exerciseTypeZodEnum.optional(), // Made optional for filtering
 })
 
 export type ExerciseQueryInput = z.infer<typeof exerciseQuerySchema>;

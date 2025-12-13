@@ -24,3 +24,33 @@ export const validate =
       })
     }
 }
+
+export const validateQuery =
+  (schema: ZodType) =>
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const parsed = await schema.parseAsync(req.query);
+      // req.query might be read-only (getter), so we define it on the instance
+      Object.defineProperty(req, 'query', {
+          configurable: true,
+          enumerable: true,
+          value: parsed,
+          writable: true,
+      });
+      next();
+    } catch (err: unknown) {
+      if (err instanceof ZodError) {
+        return res.status(400).json({
+          errors: err.issues,
+          message: err.issues[0].message,
+          status: "error"
+        });
+      }
+      console.error("validateQuery error:", err);
+      return res.status(500).json({
+        details: String(err),
+        message: "Internal server error",
+        status: "error"
+      })
+    }
+}
