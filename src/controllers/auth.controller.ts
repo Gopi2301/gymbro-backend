@@ -256,8 +256,7 @@ export const coachSignup = async (req: Request, res: Response) => {
 };
 
 export const superAdminSignup = async (req: Request, res: Response) => {
-  const { email, name, password, role } = req.body as SuperAdminSignupInput;
-  console.log({ email, name, password, role });
+  const { email, name, password } = req.body as SuperAdminSignupInput;
 
   const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
   const redirectUrl = `${frontendUrl.replace(/\/$/, "").replace(/\/sign-in\/?$/, "")}/sign-in`;

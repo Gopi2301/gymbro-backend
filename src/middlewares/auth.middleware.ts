@@ -44,3 +44,23 @@ export const requireAuth = async (req: Request, res: Response, next: NextFunctio
     });
   }
 };
+
+export const requireRole = (allowedRoles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Unauthorized: User not authenticated",
+      });
+    }
+
+    const userRole = req.user.user_metadata.role as string | undefined;
+
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      return res.status(403).json({
+        message: "Forbidden: Insufficient permissions",
+      });
+    }
+
+    next();
+  };
+};

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."muscle_group" ADD VALUE 'core';

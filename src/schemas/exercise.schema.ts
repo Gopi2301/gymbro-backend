@@ -2,8 +2,9 @@ import { relations } from "drizzle-orm";
 import { boolean, decimal, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import z from "zod";
 
+// Drizzle ORM enums for database schema
 export const muscleGroupEnum = pgEnum('muscle_group',[
-    'chest', 'back', 'shoulders', 'biceps', 'triceps', 'quadriceps','hamstrings', 'glutes', 'calves', 'abs', 'forearms', 'traps', 'cardio_system'
+    'chest', 'back', 'shoulders', 'biceps', 'triceps', 'quadriceps','hamstrings', 'glutes', 'calves', 'abs', 'forearms', 'traps', 'cardio_system', 'core'
 ])
 
 export const exerciseTypeEnum = pgEnum('exercise_type', [
@@ -18,10 +19,55 @@ export const equipmentEnum = pgEnum('equipment', [
     'barbell', 'dumbbell', 'kettlebell', 'medicine ball', 'plate', 'rope', 'sled', 'tire', 'weight plate', 'body weight', 'other'
 ])
 
-export type equipmentEnumType = z.infer<typeof equipmentEnum>;
+// Zod enums for validation (mirroring the Drizzle enums)
+export const muscleGroupZodEnum = z.enum([
+    'chest', 'back', 'shoulders', 'biceps', 'triceps', 'quadriceps','hamstrings', 'glutes', 'calves', 'abs', 'forearms', 'traps','core', 'cardio_system'
+])
+
+export const exerciseTypeZodEnum = z.enum([
+    'compound',
+    'isolation',
+    'cardio',
+    'plyometric',
+    'stretching'
+])
+
+export const equipmentZodEnum = z.enum([
+    'barbell', 'dumbbell', 'kettlebell', 'medicine ball', 'plate', 'rope', 'sled', 'tire', 'weight plate', 'body weight', 'other'
+])
+
+// Type exports
+export type equipmentType = z.infer<typeof equipmentZodEnum>;
+export type exerciseType = z.infer<typeof exerciseTypeZodEnum>;
+export type muscleGroupType = z.infer<typeof muscleGroupZodEnum>;
+
+// Zod schema for validating exercise queries
+export const exerciseQuerySchema = z.object({
+  equipment: equipmentZodEnum.optional(),
+  primaryMuscle: muscleGroupZodEnum,
+  secondaryMuscle: muscleGroupZodEnum.optional(),
+  stabilizers: muscleGroupZodEnum.optional(),
+  type: exerciseTypeZodEnum,
+})
+
+export type ExerciseQueryInput = z.infer<typeof exerciseQuerySchema>;
+
+export const createExerciseSchema = z.object({
+  description: z.string().optional(),
+  equipment: equipmentZodEnum,
+  name: z.string().min(1),
+  primaryMuscle: muscleGroupZodEnum,
+  secondaryMuscle: z.preprocess((val) => (typeof val === 'string' ? [val] : val), z.array(muscleGroupZodEnum).optional()),
+  stabilizers: z.preprocess((val) => (typeof val === 'string' ? [val] : val), z.array(muscleGroupZodEnum).optional()),
+  type: exerciseTypeZodEnum,
+  videoUrl: z.string().optional(),
+});
+
+export type CreateExerciseInput = z.infer<typeof createExerciseSchema>;
 
 export const exercises = pgTable('exercises', {
    createdAt: timestamp('created_at').defaultNow(),
+   createdBy: uuid('created_by'), // Super admin who created this exercise
    description:text('description'),
    equipment:equipmentEnum('equipment').notNull(),
    id: uuid('id').defaultRandom().primaryKey(),
@@ -35,7 +81,7 @@ export const exercises = pgTable('exercises', {
 })  
 
 export const routines = pgTable('routines', {
-  coachId: uuid('coach_id').notNull(), 
+  coachId: uuid('coach_id').notNull(), // Will add reference after importing coachTable
   createdAt: timestamp('created_at').defaultNow(),
   description: text('description'),
   difficultyLevel: varchar('difficulty_level', { enum: ['beginner', 'intermediate', 'advanced'] }),
@@ -43,7 +89,8 @@ export const routines = pgTable('routines', {
   isPremium: boolean('is_premium').default(false),
   isPublic: boolean('is_public').default(false),
   name: varchar('name', { length: 255 }).notNull(), 
-  price: decimal('price', { precision: 10, scale: 2 }), 
+  price: decimal('price', { precision: 10, scale: 2 }),
+  updatedAt: timestamp('updated_at').defaultNow().$onUpdateFn(() => new Date()),
 })
 
 export const routineSplits = pgTable('routine_splits',{
@@ -63,12 +110,13 @@ export const routineExercises = pgTable('routine_exercises',{
     restTimeSeconds:integer('rest_time_seconds'),
     rpeTarget:integer('rpe_target'),
     sets: integer('sets').notNull(),
-    splitId: uuid('splid_id').references(()=> routineSplits.id, {onDelete:'cascade'}),
+    splitId: uuid('split_id').references(()=> routineSplits.id, {onDelete:'cascade'}),
     tempo:varchar('tempo', {length:50})
 })
 
 export const routineRelations = relations(routines, ({many}) => ({
-    splits: many(routineSplits)
+    splits: many(routineSplits),
+    // Note: coach relation will be added when we import coachTable to avoid circular dependency
 }))
 
 export const splitsRelations = relations(routineSplits,({many, one})=>({

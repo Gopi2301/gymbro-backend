@@ -1,6 +1,6 @@
 {
-  "id": "d02762b5-d812-4853-8ac5-58a6751c80ea",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "9d160b7c-71e8-4962-a988-cd7d6c4cbd4c",
+  "prevId": "d02762b5-d812-4853-8ac5-58a6751c80ea",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -752,7 +752,8 @@
         "abs",
         "forearms",
         "traps",
-        "cardio_system"
+        "cardio_system",
+        "core"
       ]
     }
   },
